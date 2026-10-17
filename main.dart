@@ -1,4 +1,168 @@
-// 6. FILTER BY SINGLE MEMBER
+enum ExpenseCategory {
+  food,
+  travel,
+  shopping,
+  bills,
+  entertainment,
+  other,
+}
+
+// 1. MEMBER CLASS
+class Member {
+  final String id;
+  final String name;
+
+  Member({required this.id, required this.name});
+}
+
+// 2. EXPENSE CLASS
+class Expense {
+  final String title;
+  final int amount;
+  final String paidBy;
+  final ExpenseCategory category;
+  final List<String> splitBetween;
+
+  Expense({
+    required this.title,
+    required this.amount,
+    required this.paidBy,
+    required this.category,
+    required this.splitBetween,
+  });
+}
+
+// 3. EXPENSE GROUP CLASS
+class ExpenseGroup {
+  final List<Member> _members = [];
+  final List<Expense> _expenses = [];
+
+  int _nextId = 1;
+
+  // Add a member with a unique name and ID.
+  void addMember(String name) {
+    name = name.trim();
+
+    if (name.isEmpty) {
+      throw ArgumentError('Member name cannot be empty.');
+    }
+
+    for (final member in _members) {
+      if (member.name.toLowerCase() == name.toLowerCase()) {
+        throw ArgumentError('Member already exists: $name');
+      }
+    }
+
+    final id = 'M${_nextId.toString().padLeft(3, '0')}';
+
+    _members.add(Member(id: id, name: name));
+    _nextId++;
+
+    print('Member added: $name (ID: $id)');
+  }
+
+  // Find a member by name or ID.
+  Member _findMember(String nameOrId) {
+    for (final member in _members) {
+      if (member.name.toLowerCase() == nameOrId.toLowerCase() ||
+          member.id.toLowerCase() == nameOrId.toLowerCase()) {
+        return member;
+      }
+    }
+
+    throw ArgumentError('Unknown member: $nameOrId');
+  }
+
+  // Convert category text to an enum.
+  ExpenseCategory _parseCategory(String category) {
+    for (final item in ExpenseCategory.values) {
+      if (item.name.toLowerCase() == category.trim().toLowerCase()) {
+        return item;
+      }
+    }
+
+    throw ArgumentError('Invalid category: $category');
+  }
+
+  // 4. ADD EXPENSE
+  void addExpense({
+    required String title,
+    required int amount,
+    required String paidBy,
+    required String category,
+    required List<String> splitBetween,
+  }) {
+    if (title.trim().isEmpty) {
+      throw ArgumentError('Expense title cannot be empty.');
+    }
+
+    if (amount <= 0) {
+      throw ArgumentError('Amount must be positive.');
+    }
+
+    if (splitBetween.isEmpty) {
+      throw ArgumentError('At least one participant is required.');
+    }
+
+    final payer = _findMember(paidBy);
+    final selectedMembers = <Member>[];
+    final selectedIds = <String>{};
+
+    for (final name in splitBetween) {
+      final member = _findMember(name);
+
+      if (!selectedIds.add(member.id)) {
+        throw ArgumentError('Duplicate participant: ${member.name}');
+      }
+
+      selectedMembers.add(member);
+    }
+
+    if (amount % selectedMembers.length != 0) {
+      throw ArgumentError(
+        'Amount must divide evenly among participants '
+        'in the basic version.',
+      );
+    }
+
+    final expense = Expense(
+      title: title.trim(),
+      amount: amount,
+      paidBy: payer.id,
+      category: _parseCategory(category),
+      splitBetween: selectedMembers.map((m) => m.id).toList(),
+    );
+
+    _expenses.add(expense);
+
+    print('Expense added: ${expense.title} - INR ${expense.amount}');
+  }
+
+  // 5. LIST ALL EXPENSES
+  void printExpenses() {
+    print('\n========== ALL EXPENSES ==========');
+
+    if (_expenses.isEmpty) {
+      print('No expenses found.');
+      return;
+    }
+
+    for (final expense in _expenses) {
+      final payer = _findMember(expense.paidBy);
+      final participants = expense.splitBetween
+          .map((id) => _findMember(id).name)
+          .join(', ');
+
+      print('Title: ${expense.title}');
+      print('Amount: INR ${expense.amount}');
+      print('Paid by: ${payer.name}');
+      print('Category: ${expense.category.name}');
+      print('Participants: $participants');
+      print('Share per person: INR '
+          '${expense.amount ~/ expense.splitBetween.length}');
+      print('------------------------------');
+    }
+    // 6. FILTER BY SINGLE MEMBER
   void filterByMember(String nameOrId) {
     final member = _findMember(nameOrId);
 
@@ -151,3 +315,4 @@ void main() {
     print('An unexpected error occurred: $error');
   }
 }
+  }
